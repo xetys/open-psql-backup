@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backup-database
+spec:
+  template:
+    metadata:
+      name: backup-databases
+    spec:
+      imagePullSecrets:
+        - name: gitlab
+      volumes:
+        - name: kube-configs
+          secret:
+            secretName: backuper-kube-configs
+        - name: backup-dir
+          hostPath:
+            path: /var/backups/databases
+      containers:
+      - name: backuper
+        image: xetys/open-psql-backup:latest
+        command: ["/back-up.sh"]
+        env:
+          - name: NAMESPACE
+            value: default
+          - name: BACKUP_DIR
+            value: /backups
+        volumeMounts:
+        - name: backup-dir
+          mountPath: /backups
+      restartPolicy: Never
+  backoffLimit: 4
