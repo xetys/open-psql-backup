@@ -10,7 +10,7 @@ RUN apk add --update ca-certificates \
 
 ENV DAEMON_MODE=0 \
     BACKUP_DIR=/backups \
-    NAMESPACE=kloud
+    NAMESPACE=default
 
 ADD ./back-up.sh /back-up.sh
 CMD /back-up.sh
