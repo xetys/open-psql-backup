@@ -14,6 +14,12 @@ and a constant growth of database size, the backup storage growth is still linea
 
 ## How to use
 
+First prepare your target postgres deployments using
+
+``` bash
+$ kubectl label deployment xxx is-psql=true
+```
+
 There are three types of get open-psql-working in your Kubernetes cluster:
 
 * As a Deployment with daemon mode enabled
@@ -28,7 +34,7 @@ Just run
 $ kubectl run open-psql-backup --image=xetys/open-psql-backup --env="DAEMON_MODE=1"
 ```
 
-To run open-psql-backup in default namespace. Add the `NAMESPACE` env var if you wan't to watch postgres containers on different namespaces.
+To run open-psql-backup in the current namespace. Deploy it in a different namespace if you wan't to watch postgres containers in a other namespace than default.
 This deployment method is highly compatible with kuberntes 1.3+, as it only uses deployments.
 
 ### Onetime job
@@ -55,12 +61,20 @@ Note: Currently this tool expects Postgres instances with no password set!
 
 ## Where the backups are stored
 
-The default configuration stores backups in the host path `/var/backups/databases`. You can change that by using a `PersistentVolumeClaim`
+
+The default configuration stores backups in the path `/backups` of the volume named 'backup-dir'. You can change that by using a `PersistentVolumeClaim`
 or any other storage strategy you like.
 
-### example with CIFS
 
-My use case today is using the [Storage Boxes](https://www.hetzner.de/storage-box) from Hetzner, which allow CIFS connections. On every node, I've `cifs-utils` installed and mounted
+### example with CephFS
+
+The current example shows a binding to a static CephFS using a local secret. With this, you can open the backups 
+on all nodes by doing a manual ceph mount on that FS to get the backups. This approach works the same in [rook.io](https://rook.io) and its
+shared filesystem.
+
+### example with CIFS (old)
+
+My initial case was using the [Storage Boxes](https://www.hetzner.de/storage-box) from Hetzner, which allow CIFS connections. On every node, I've `cifs-utils` installed and mounted
 a CIFS mount into `/var/backups/database`.
 
 This could be achieved by adding
@@ -75,6 +89,6 @@ to `/etc/fstab` and mounting it using
 $ mount -t cifs -o username=uXXX,password=YYY //uXXX.your-storagebox.de/backup/db-backup /var/backups/databases
 ```
 
-and then installing open-psq-backup
+and then installing open-psql-backup
 
 
