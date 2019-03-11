@@ -14,12 +14,6 @@ and a constant growth of database size, the backup storage growth is still linea
 
 ## How to use
 
-First prepare your target postgres deployments using
-
-``` bash
-$ kubectl label deployment xxx is-psql=true
-```
-
 There are three types of get open-psql-working in your Kubernetes cluster:
 
 * As a Deployment with daemon mode enabled
@@ -53,11 +47,53 @@ to run the tool one time or
 $ kubectl apply -f k8s/cronjob.yaml
 ```
 
-## How to declare backupable postgres container
+## How this tool finds postgres containers
 
-Open-psql-backup looks for any deployments with the label `is-psql: true`. Just `kubectl label deploy` those.
+Open-psql-backup looks for any deployments with the image `postgresql`. 
+
+The recent version of this tool used labels to include marked instances. The current version automatically
+finds all PostgresSQL instances. Maybe in future, it would be better to allow in- and exclusion of containers.
 
 Note: Currently this tool expects Postgres instances with no password set!
+
+## ./k8s-psql-tool.sh
+
+The core bash script of this project is the k8s-psql-tool. It allows several operations on PSQL databases, such
+as backup (either with the old timestamp, or with a given name), restore by name, and executing queries on all instances
+
+usage: ./k8s-psql-tool.sh <ACTION> [OPTIONS...]
+
+Actions: 
+
+  backup: creates a backup of all PostgreSQL databases
+  
+  restore: restores PostgreSQL databases
+  
+  exec: executes a query against all PostgreSQL databases
+  
+  
+Options: 
+
+  --name,-n:      do not use a timestamp as backup name, but specify it
+  
+  --filter,-f:    perform action on a filtered set of databases
+  
+Examples: 
+```bash
+# just create a backup
+./k8s-psql-tool.sh backup
+# create a backup in the directory 'my-backup'
+./k8s-psql-tool.sh backup -n my-backup
+# restore backup 'my-backup'
+./k8s-psql-tool.sh restore -n my-backup
+# restore backup 'my-backup', but only uaa databases
+./k8s-psql-tool.sh restore -n my-backup -f uaa
+# run some sql on all dbs
+./k8s-psql-tool.sh exec 'select * from table'
+# run some sql on uaa database
+./k8s-psql-tool.sh exec -f uaa 'select * from table'
+```
+
 
 ## Where the backups are stored
 

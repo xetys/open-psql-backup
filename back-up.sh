@@ -3,35 +3,37 @@ set -e
 
 BACKUP_DIR=${BACKUP_DIR:-"/backups"}
 DAEMON_MODE=${DAEMON_MODE:-"0"}
+NAMESPACE=${NAMESPACE:-"default"}
 
 function kctl() {
     kubectl "$@"
 }
 
-DATABASES=($(kctl get deploy -l is-psql=true | grep -v NAME | awk '{print$1}'))
+#DATABASES=($(kctl get deploy -l is-psql=true | grep -v NAME | awk '{print$1}'))
 
 
 function doBackUp() {
-    DATE=`date +%d-%m-%Y-%H-%w`
-    echo "doing backup in ${DATE}"
-    mkdir -p "${BACKUP_DIR}/${DATE}"
-    cd "${BACKUP_DIR}/${DATE}"
-
-    #for (( i=1; i<${#DATABASES[@]}+1; i++ ));
-    for db in "${DATABASES[@]}"
-    do
-        echo "loading data of database ${db}"
-        # get the source pod
-        SOURCE_POD=`kctl get pod | grep Running | grep ${db} | awk '{print$1}'`
-        # get pod connection data
-        SOURCE_USER=`kctl describe pod ${SOURCE_POD} | grep USER | awk -F':' '{print $2}' | xargs`
-
-        echo "backing up ${SOURCE_USER}@${SOURCE_POD}..."
-        kctl exec -it ${SOURCE_POD} -- pg_dump -U ${SOURCE_USER} --format=c ${SOURCE_USER} > "${BACKUP_DIR}/${DATE}/${SOURCE_USER}.sqlc"
-        echo "database ${SOURCE_USER} saved..."
-    done
-
-    cd ../../
+#    DATE=`date +%d-%m-%Y-%H-%w`
+#    echo "doing backup in ${DATE}"
+#    mkdir -p "${BACKUP_DIR}/${DATE}"
+#    cd "${BACKUP_DIR}/${DATE}"
+#
+#    #for (( i=1; i<${#DATABASES[@]}+1; i++ ));
+#    for db in "${DATABASES[@]}"
+#    do
+#        echo "loading data of database ${db}"
+#        # get the source pod
+#        SOURCE_POD=`kctl get pod | grep Running | grep ${db} | awk '{print$1}'`
+#        # get pod connection data
+#        SOURCE_USER=`kctl describe pod ${SOURCE_POD} | grep USER | awk -F':' '{print $2}' | xargs`
+#
+#        echo "backing up ${SOURCE_USER}@${SOURCE_POD}..."
+#        kctl exec -it ${SOURCE_POD} -- pg_dump -U ${SOURCE_USER} --format=c ${SOURCE_USER} > "${BACKUP_DIR}/${DATE}/${SOURCE_USER}.sqlc"
+#        echo "database ${SOURCE_USER} saved..."
+#    done
+#
+#    cd ../../
+    ./k8s-psql-tool.sh backup --namespace ${NAMESPACE} --backup-dir ${BACKUP_DIR}
     echo "backups created"
 }
 
