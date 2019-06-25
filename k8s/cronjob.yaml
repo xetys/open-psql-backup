@@ -30,6 +30,8 @@ spec:
             env:
               - name: BACKUP_DIR
                 value: /backups
+              - name: NAMESPACE
+                value: kloud
             volumeMounts:
             - name: backup-dir
               mountPath: /backups

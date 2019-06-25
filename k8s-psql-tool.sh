@@ -6,6 +6,7 @@ BACKUP_DIR=${BACKUP_DIR:-"./backups"}
 ACTION="help"
 REST=""
 FILTER=""
+DROP_SCHEMA=false
 
 helpfunc() {
     echo "usage: ./k8s-psql-tool.sh <ACTION> [OPTIONS...]"
@@ -66,6 +67,9 @@ do
         NAMESPACE="$1"
         shift
         ;;
+    --drop-schema|-d)
+        DROP_SCHEMA=true
+        ;;
     --backup-dir|-b)
         BACKUP_DIR="$1"
         shift
@@ -88,9 +92,9 @@ do
 done
 
 if [[ ${FILTER} = "" ]]; then
-    SQL_PODS=($(kctl get po -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{"\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | awk '$2 ~ /postgres/ {print$1}'))
+    SQL_PODS=($(kctl get po -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{"\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | awk '($2 ~ /postgres/ || $2 ~ /postgis/) {print$1}'))
 else
-    SQL_PODS=($(kctl get po -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{"\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | awk '$2 ~ /postgres/ {print$1}' | grep ${FILTER}))
+    SQL_PODS=($(kctl get po -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{"\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | awk '($2 ~ /postgres/ || $2 ~ /postgis/) {print$1}' | grep ${FILTER}))
 fi
 case ${ACTION} in
 "backup")
@@ -114,7 +118,10 @@ case ${ACTION} in
                 echo "found dump ${dump} for pod ${service}"
 
                 kctl cp "${BACKUP_DIR}/${BACKUP_NAME}/${dump}" "${NAMESPACE}/${service}:/db.dump"
-                kctl exec -it ${service} -- pg_restore -U ${SOURCE_USER} -d ${SOURCE_USER} -Fc -c -1 "/db.dump"
+                if ${DROP_SCHEMA}; then
+                    kctl exec -it ${service} -- psql -U ${SOURCE_USER} -c 'DROP SCHEMA PUBLIC CASCADE; CREATE SCHEMA PUBLIC;'
+                fi
+                kctl exec -it ${service} -- pg_restore -U ${SOURCE_USER} -d ${SOURCE_USER} -Fc --clean "/db.dump"
             fi
         done
     done
