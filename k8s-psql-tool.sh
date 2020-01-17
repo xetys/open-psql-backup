@@ -121,7 +121,7 @@ case ${ACTION} in
                 if ${DROP_SCHEMA}; then
                     kctl exec -it ${service} -- psql -U ${SOURCE_USER} -c 'DROP SCHEMA PUBLIC CASCADE; CREATE SCHEMA PUBLIC;'
                 fi
-                kctl exec -it ${service} -- pg_restore -U ${SOURCE_USER} -d ${SOURCE_USER} -Fc --clean "/db.dump"
+                kctl exec -it ${service} -- pg_restore -U ${SOURCE_USER} -d ${SOURCE_USER} -Fc --clean --no-owner --no-acl --role=${SOURCE_USER} "/db.dump"
             fi
         done
     done
